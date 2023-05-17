@@ -1,6 +1,7 @@
 const userModel = require('../../models/userModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const transporter = require('../../../config/emailConfig');
 
 class userController {
             static userRegister = async (req,res) => {
@@ -92,7 +93,14 @@ class userController {
                             const secret = user._id + process.env.JWT_SECCRET;
                             const token = jwt.sign({userID:user._id},secret,{expiresIn:'15m'});
                             const link = `http://localhost:8000/api/user/reset/${user._id}/${token}`;
-                            res.send({"status":"success","message":"Link sent to your email!","link":link});
+                             let info = await transporter.sendMail({
+                             from: process.env.MAIL_FROM, // sender address
+                             to: user.email, // list of receivers
+                             subject: "Reset Password", // Subject line
+                             text: "Reset your password here!", // plain text body
+                             html: `<a href = ${link}>Click Here </a>`, // html body
+                             });
+                            res.send({"status":"success","message":"Link sent to your email!","Info":info});
                         }else{
                             res.send({"status":"failed","message":"Email not exist!"});
                         }
@@ -102,6 +110,7 @@ class userController {
             }
             static resetPassword = async (req,res) => {
                 const {password, password_confirm} = req.body;
+                
                 const {id,token} = req.params;
                 const user = await userModel.findById(id);
                 const new_secret = user._id + process.env.JWT_SECCRET;
